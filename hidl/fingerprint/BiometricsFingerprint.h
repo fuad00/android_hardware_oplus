@@ -37,6 +37,7 @@ namespace V2_3 {
 namespace implementation {
 
 using ::android::sp;
+using ::android::base::GetBoolProperty;
 using ::android::base::GetProperty;
 using ::android::hardware::hidl_string;
 using ::android::hardware::Return;
@@ -118,6 +119,12 @@ class BiometricsFingerprint : public IBiometricsFingerprint,
     bool isUff() {
         return android::base::StartsWith(GetProperty("persist.vendor.fingerprint.version", ""),
                                          "UFF ");
+    }
+
+    // Some HALs get finger down/up from the touch panel driver (netlink) on their own.
+    // Forwarding onFingerDown()/onFingerUp() as well makes them capture twice per touch.
+    bool skipFingerPress() {
+        return isUff() || GetBoolProperty("vendor.oplus.fingerprint.skip_finger_press", false);
     }
 
     bool setDimlayerHbm(unsigned int value) {
