@@ -102,6 +102,13 @@ Return<void> BiometricsFingerprint::onEnrollResult(uint64_t deviceId, uint32_t f
 Return<void> BiometricsFingerprint::onAcquired(uint64_t deviceId,
                                                V2_1::FingerprintAcquiredInfo acquiredInfo,
                                                int32_t vendorCode) {
+    // oplus HALs report their own messages as raw acquiredInfo values starting at 1000
+    // (e.g. 1001 duplicate area, 1002 duplicate finger). Pass them as vendor messages,
+    // which the framework looks up in fingerprint_acquired_vendor.
+    if (static_cast<int32_t>(acquiredInfo) >= 1000) {
+        vendorCode = static_cast<int32_t>(acquiredInfo) - 1000;
+        acquiredInfo = V2_1::FingerprintAcquiredInfo::ACQUIRED_VENDOR;
+    }
     return mClientCallback->onAcquired(deviceId, acquiredInfo, vendorCode);
 }
 
