@@ -16,6 +16,7 @@ import android.os.VibrationAttributes
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.provider.Settings
+import android.util.Log
 import android.view.KeyEvent
 import com.android.internal.os.DeviceKeyHandler
 import java.io.File
@@ -71,7 +72,8 @@ class KeyHandler(private val context: Context) : DeviceKeyHandler {
             return event
         }
 
-        val deviceName = event.device.name
+        val deviceName = event.device?.name
+        Log.d(TAG, "handleKeyEvent: device=$deviceName scanCode=${event.scanCode} keyCode=${event.keyCode}")
 
         if (deviceName != "oplus,hall_tri_state_key" && deviceName != "oplus,tri-state-key") {
             return event
@@ -83,7 +85,9 @@ class KeyHandler(private val context: Context) : DeviceKeyHandler {
     }
 
     private fun populateKeyState(firstRun: Boolean) {
-        when (File("/proc/tristatekey/tri_state").readText().trim()) {
+        val state = File("/proc/tristatekey/tri_state").readText().trim()
+        Log.d(TAG, "populateKeyState: state=$state firstRun=$firstRun")
+        when (state) {
             "1" -> handleMode(POSITION_TOP, firstRun)
             "2" -> handleMode(POSITION_MIDDLE, firstRun)
             "3" -> handleMode(POSITION_BOTTOM, firstRun)
@@ -113,7 +117,8 @@ class KeyHandler(private val context: Context) : DeviceKeyHandler {
                 else -> return
             }
 
-        executorService.submit {
+        executorService.submit { try {
+            Log.d(TAG, "handleMode: position=$position mode=$mode")
             when (mode) {
                 AudioManager.RINGER_MODE_SILENT -> {
                     setZenMode(Settings.Global.ZEN_MODE_OFF)
@@ -146,7 +151,9 @@ class KeyHandler(private val context: Context) : DeviceKeyHandler {
                 if (showDialog) sendNotification(position, mode)
                 vibrateIfNeeded(mode)
             }
-        }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to apply alert slider mode $mode", e)
+        } }
     }
 
     private fun setZenMode(zenMode: Int) {
